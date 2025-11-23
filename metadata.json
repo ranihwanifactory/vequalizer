@@ -1,0 +1,5 @@
+{
+  "name": "SonicVision AI",
+  "description": "An immersive music visualizer that uses Gemini AI to generate color palettes and visual themes based on the mood of your music.",
+  "requestFramePermissions": []
+}
