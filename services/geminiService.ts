@@ -2,21 +2,30 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AIThemeResponse } from '../types';
 
 export class GeminiService {
-  private client: GoogleGenAI;
+  private client: GoogleGenAI | null = null;
 
   constructor() {
-    this.client = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Initialization is deferred to getClient() to prevent runtime errors 
+    // if process.env is not immediately available during module loading.
+  }
+
+  private getClient(): GoogleGenAI {
+    if (!this.client) {
+      this.client = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    }
+    return this.client;
   }
 
   async generateTheme(description: string): Promise<AIThemeResponse | null> {
     try {
+      const client = this.getClient();
       const model = "gemini-2.5-flash";
       const prompt = `
         Create a music visualizer theme based on this mood/description: "${description}".
         Suggest a color palette (5 hex codes), a visualizer mode (BARS, WAVE, CIRCLE, PARTICLES), and a short 1 sentence vibe description.
       `;
 
-      const response = await this.client.models.generateContent({
+      const response = await client.models.generateContent({
         model: model,
         contents: prompt,
         config: {
