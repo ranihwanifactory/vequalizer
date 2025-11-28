@@ -1,5 +1,7 @@
 {
-  "name": "SonicVision AI",
-  "description": "An immersive music visualizer that uses Gemini AI to generate color palettes and visual themes based on the mood of your music.",
-  "requestFramePermissions": []
+  "name": "Prism Wave Visualizer",
+  "description": "An immersive, AI-powered music visualizer and equalizer. Upload your tracks or use the microphone, and let AI generate custom themes based on the mood.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

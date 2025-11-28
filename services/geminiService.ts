@@ -1,68 +1,56 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { MoodAnalysis, VisualizerMode } from "../types";
+import { AIThemeResponse } from '../types';
 
-// Helper to get the client
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API Key is missing");
+export class GeminiService {
+  private client: GoogleGenAI;
+
+  constructor() {
+    this.client = new GoogleGenAI({ apiKey: process.env.API_KEY });
   }
-  return new GoogleGenAI({ apiKey });
-};
 
-export const analyzeSongMood = async (songName: string, artist?: string): Promise<MoodAnalysis> => {
-  const ai = getClient();
-  
-  const prompt = `
-    Analyze the song "${songName}"${artist ? ` by ${artist}` : ''}. 
-    Determine its emotional mood, a short description of the vibe, 3 vibrant hex colors (neon or high contrast preferred for dark background) that represent this mood, and the best visualizer style.
-    
-    The visualizer styles are:
-    - BARS: Good for energetic, rhythmic, bass-heavy music.
-    - WAVE: Good for calm, acoustic, or classical music.
-    - CIRCULAR: Good for electronic, techno, or repetitive beats.
-    - ORB: Good for ambient, ethereal, or slow music.
-  `;
+  async generateTheme(description: string): Promise<AIThemeResponse | null> {
+    try {
+      const model = "gemini-2.5-flash";
+      const prompt = `
+        Create a music visualizer theme based on this mood/description: "${description}".
+        Suggest a color palette (5 hex codes), a visualizer mode (BARS, WAVE, CIRCLE, PARTICLES), and a short 1 sentence vibe description.
+      `;
 
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            mood: { type: Type.STRING, description: "One or two words describing the mood (e.g., 'Melancholic', 'High Energy')" },
-            description: { type: Type.STRING, description: "A short sentence describing the visual atmosphere." },
-            colors: { 
-              type: Type.ARRAY, 
-              items: { type: Type.STRING },
-              description: "Array of 3 hex color codes (e.g. ['#FF0000', '#00FF00', '#0000FF'])"
+      const response = await this.client.models.generateContent({
+        model: model,
+        contents: prompt,
+        config: {
+          systemInstruction: "You are a creative UI designer for a music app.",
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              themeName: { type: Type.STRING },
+              colorPalette: { 
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "Array of 5 hex color strings"
+              },
+              suggestedMode: { 
+                type: Type.STRING,
+                enum: ["BARS", "WAVE", "CIRCLE", "PARTICLES"]
+              },
+              vibeDescription: { type: Type.STRING }
             },
-            recommendedMode: { 
-              type: Type.STRING, 
-              enum: ['BARS', 'WAVE', 'CIRCULAR', 'ORB'],
-              description: "The recommended visualizer mode."
-            }
-          },
-          required: ["mood", "description", "colors", "recommendedMode"]
+            required: ["themeName", "colorPalette", "suggestedMode", "vibeDescription"]
+          }
         }
+      });
+
+      if (response.text) {
+        return JSON.parse(response.text) as AIThemeResponse;
       }
-    });
-
-    const text = response.text;
-    if (!text) throw new Error("No response from Gemini");
-
-    return JSON.parse(text) as MoodAnalysis;
-  } catch (error) {
-    console.error("Gemini analysis failed:", error);
-    // Fallback default
-    return {
-      mood: "Unknown",
-      description: "Could not analyze vibe. Using default settings.",
-      colors: ["#6366f1", "#a855f7", "#ec4899"],
-      recommendedMode: VisualizerMode.BARS
-    };
+      return null;
+    } catch (error) {
+      console.error("Gemini API Error:", error);
+      return null;
+    }
   }
-};
+}
+
+export const geminiService = new GeminiService();
